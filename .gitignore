@@ -1,0 +1,13 @@
+.*
+!.gitignore
+/official_examples/
+/misc/
+/__pycache__/
+/.vscode/
+.env
+*.log
+*.pkl
+misc.txt
+rss_feed_grabber.py
+temp.py
+suggestions_log.pkl
