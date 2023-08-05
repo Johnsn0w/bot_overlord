@@ -4,6 +4,8 @@ import sys
 
 print("rebooter script starting")
 time.sleep(3)  # wait 3 seconds
-subprocess.Popen([sys.executable, 'smiley_bot_main.py'])  # start main script
 
-print("rebooter script exiting(I hope)")
+print("rebooter script starting main script")
+subprocess.Popen([sys.executable, 'bot_main.py']) 
+
+print("rebooter script exiting")

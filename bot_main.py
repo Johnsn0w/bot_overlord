@@ -19,15 +19,15 @@ def load_env_vars():
 load_env_vars()
 
 def load_suggestions():
-    if not os.path.exists('suggestions_log.pkl'):
+    if not os.path.exists('persistent_data/suggestions_log.pkl'):
         print("Creating a new suggestions dictionary...")
         return {}, 1
-    with open('suggestions_log.pkl', 'rb') as f:
+    with open('persistent_data/suggestions_log.pkl', 'rb') as f:
         data = pickle.load(f)
         return data['suggestions'], data['suggestion_index_counter']
 
 def save_suggestions(suggestions, suggestion_index_counter):
-    with open('suggestions_log.pkl', 'wb') as f:
+    with open('persistent_data/suggestions_log.pkl', 'wb') as f:
         pickle.dump({'suggestions': suggestions, 'suggestion_index_counter': suggestion_index_counter}, f)
 
 suggestions, suggestion_index_counter = load_suggestions()
@@ -37,7 +37,7 @@ LOGGING_CHANNEL_ID = 1133637838219530261
 DISCORD_API_KEY = os.environ.get('DISCORD_API_KEY')
 CHANNEL_ID = 1132129923771928648
 
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler = logging.FileHandler(filename='persistent_data/discord.log', encoding='utf-8', mode='w')
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
 @bot.event
@@ -48,7 +48,7 @@ async def on_ready():
 
 @bot.command(help=f"Say's hello")
 async def hello(ctx): # context, we'll use this to refer to the channel that the command was sent from
-    await ctx.send("Hey big boy testing222")
+    await ctx.send("Hey big boy")
 
 
 @bot.command(help=f"Sends a message as the bot to a specified channel. Eg !modsend #general This is your robot overlord speaking")
@@ -189,6 +189,12 @@ async def restart(ctx):
     await ctx.send("Bot is restarting...")
     os.system('python rebooter.py')  # start rebooter script
     await bot.close()  # close the bot
+
+@bot.command(help="shutdown the bot")
+@commands.has_any_role('887979941667405844', '1015191781865947146', 'admin') # chch admin, chch helper
+async def shutdown(ctx):
+    await ctx.send("Bot is shutting down...")
+    await bot.close()
 
 @bot.event
 async def on_command_error(ctx, error): 
