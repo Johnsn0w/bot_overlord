@@ -48,7 +48,7 @@ async def on_ready():
 
 @bot.command(help=f"Say's hello")
 async def hello(ctx): # context, we'll use this to refer to the channel that the command was sent from
-    await ctx.send("Hey big boy")
+    await ctx.send("Hey big boy123")
 
 
 @bot.command(help=f"Sends a message as the bot to a specified channel. Eg !modsend #general This is your robot overlord speaking")
