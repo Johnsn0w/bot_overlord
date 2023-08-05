@@ -1,5 +1,3 @@
-.*
-!.gitignore
 /official_examples/
 /misc/
 /__pycache__/
@@ -7,10 +5,11 @@
 /persistent_data/
 .env
 *.log
+.*
+!.gitignore
 *.pkl
 *.7z
 *.zip
 misc.txt
 rss_feed_grabber.py
 temp.py
-suggestions_log.pkl
