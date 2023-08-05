@@ -1,5 +1,6 @@
 .*
 !.gitignore
+!.gitkeep
 /official_examples/
 /misc/
 /__pycache__/
