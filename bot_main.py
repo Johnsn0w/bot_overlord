@@ -35,6 +35,7 @@ suggestions, suggestion_index_counter = load_suggestions()
 USER_LOGGING_AGE = timedelta(days=7)
 LOGGING_CHANNEL_ID = 1133637838219530261
 DISCORD_API_KEY = os.environ.get('DISCORD_API_KEY')
+CURRENT_BRANCH_ENV = os.environ.get('BRANCH_ENV')
 CHANNEL_ID = 1132129923771928648
 
 handler = logging.FileHandler(filename='persistent_data/discord.log', encoding='utf-8', mode='w')
@@ -42,7 +43,7 @@ bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
 @bot.event
 async def on_ready():
-    print("Login Successful")
+    print(f"Login Successful as {CURRENT_BRANCH_ENV}")
     channel = bot.get_channel(CHANNEL_ID)
     await channel.send("HELLO BOYS, I'M BAAAAAAAACK")
 
