@@ -23,6 +23,6 @@ def fahrenheit_to_celsius(s):
     return fahrenheit_temp, celsius_temp
 
 
-
-s_result = fahrenheit_to_celsius("!346f aoiioas ioasioioafsioa sioas oasio s325f2, ai1os as231ioa2faa fasf dg ssdg")
-print(s_result)
+if __name__ == "__main__":
+    s_result = fahrenheit_to_celsius("!346f aoiioas ioasioioafsioa sioas oasio s325f2, ai1os as231ioa2faa fasf dg ssdg")
+    print(s_result)
