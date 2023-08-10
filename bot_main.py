@@ -3,7 +3,7 @@ import os
 import sys
 import logging
 import discord
-from discord import Embed, File
+from discord import Embed, File, app_commands
 from discord.ext import commands, tasks
 from discord.utils import get
 import asyncio
@@ -12,6 +12,10 @@ from unit_conversion import fahrenheit_to_celsius
 from datetime import datetime, timedelta, timezone
 import pytz
 import pickle
+from typing import Literal, Optional
+from discord.ext.commands import Greedy, Context
+
+
 
 def load_env_vars(): 
     from dotenv import load_dotenv
@@ -44,7 +48,7 @@ CHCH_HELPER_ROLE = 1015191781865947146
 
 
 handler = logging.FileHandler(filename='persistent_data/discord.log', encoding='utf-8', mode='w')
-bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
+bot = commands.Bot(command_prefix="/", intents=discord.Intents.all())
 
 @bot.event
 async def on_ready():
@@ -69,12 +73,71 @@ async def on_ready():
     print(f'LOGGING_CHANNEL_ID set to: {USER_LOGGING_CHANNEL_ID}')
     print(f'GENERAL_CHANNEL_ID set to: {GENERAL_CHANNEL_ID}')
     print(f'BOT_LOG_CHANNEL_ID set to: {BOT_LOG_CHANNEL_ID}')
+    await bot.add_cog(Greetings(bot))
+    await bot.add_cog(MyCog(bot))
 
 
-@bot.command(help=f"Say's hello")
-async def hello(ctx): # context, we'll use this to refer to the channel that the command was sent from
-    #await ctx.send("Oh hai!!")
-    await ctx.send("Oh hai!!", ephemeral=True)
+@bot.command()
+@commands.guild_only()# @commands.is_owner()
+async def sync(ctx: Context, guilds: Greedy[discord.Object], spec: Optional[Literal["~", "*", "^"]] = None) -> None:
+    """
+    Syncs the command tree to the specified guilds.
+    Parameters:
+    - ctx (Context): The invocation context.
+    - guilds (Greedy[discord.Object]): The guilds to sync the command tree to.
+    - spec (Optional[Literal["~", "*", "^"]]): The sync specification. Can be one of:
+        - "~": Syncs the command tree to the current guild.
+        - "*": Copies the global command tree to the current guild and syncs it.
+        - "^": Clears the command tree for the current guild and syncs it.
+        - None: Syncs the command tree globally.
+    Returns:
+    - None
+    """
+    if not guilds:
+        if spec == "~":
+            synced = await ctx.bot.tree.sync(guild=ctx.guild)
+        elif spec == "*":
+            ctx.bot.tree.copy_global_to(guild=ctx.guild)
+            synced = await ctx.bot.tree.sync(guild=ctx.guild)
+        elif spec == "^":
+            ctx.bot.tree.clear_commands(guild=ctx.guild)
+            await ctx.bot.tree.sync(guild=ctx.guild)
+            synced = []
+        else:
+            synced = await ctx.bot.tree.sync()
+
+        await ctx.send(
+            f"Synced {len(synced)} commands {'globally' if spec is None else 'to the current guild.'}"
+        )
+        return
+
+    ret = 0
+    for guild in guilds:
+        try:
+            await ctx.bot.tree.sync(guild=guild)
+        except discord.HTTPException:
+            pass
+        else:
+            ret += 1
+
+    await ctx.send(f"Synced the tree to {ret}/{len(guilds)}.")
+
+class MyCog(commands.Cog):
+  def __init__(self, bot: commands.Bot) -> None:
+    self.bot = bot
+  @app_commands.command(name="command-1")
+  async def my_command(self, interaction: discord.Interaction) -> None:
+    """ /command-1 """
+    await interaction.response.send_message("Hello from command 1!", ephemeral=True)
+
+
+class Greetings(commands.Cog):
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot = bot
+    @app_commands.command(name="hello-cmd-name")
+    async def hello(self, interaction: discord.Interaction):
+        """docsctring for /hello-cmd-name"""
+        await interaction.response.send_message(f'Hello {interaction.user.name}~')
 
 @bot.command(help=f"Sends a message as the bot to a specified channel. Eg !modsend #general This is your robot overlord speaking")
 @commands.has_any_role(CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, 'admin', 'admin_override') # chch admin, chch helper, admin, admin_override
