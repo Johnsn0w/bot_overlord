@@ -75,6 +75,7 @@ async def on_ready():
     print(f'BOT_LOG_CHANNEL_ID set to: {BOT_LOG_CHANNEL_ID}')
     await bot.add_cog(Greetings(bot))
     await bot.add_cog(MyCog(bot))
+    await bot.add_cog(ModCmds(bot))
 
 
 @bot.command()
@@ -130,7 +131,6 @@ class MyCog(commands.Cog):
     """ /command-1 """
     await interaction.response.send_message("Hello from command 1!", ephemeral=True)
 
-
 class Greetings(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -138,6 +138,22 @@ class Greetings(commands.Cog):
     async def hello(self, interaction: discord.Interaction):
         """docsctring for /hello-cmd-name"""
         await interaction.response.send_message(f'Hello {interaction.user.name}~')
+
+class ModCmds(commands.Cog):
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot = bot
+    @app_commands.command(name="mod-cmd-name")
+    async def mod_cmd(self, interaction: discord.Interaction):
+        """docsctring for /mod-cmd-name"""
+        channels_mentioned = interaction.message.channel_mentions
+        if not channels_mentioned:
+            await interaction.response.send_message(f'Error: You must mention/tag the channel where the message is to be sent. Please specify the channel.', ephemeral=True)
+        elif not interaction.data['options']:
+            await interaction.response.send_message(f'You did not enter a message to be sent', ephemeral=True)
+        else:
+            msg_content = interaction.data['options'][0]['value']
+            channel = channels_mentioned[0]
+            await channel.send(msg_content)
 
 @bot.command(help=f"Sends a message as the bot to a specified channel. Eg !modsend #general This is your robot overlord speaking")
 @commands.has_any_role(CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, 'admin', 'admin_override') # chch admin, chch helper, admin, admin_override
