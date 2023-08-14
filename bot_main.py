@@ -22,6 +22,7 @@ def load_env_vars():
     load_dotenv()
 load_env_vars()
 
+# LOAD AND SAVE NEED REWRITE. THEY OVERWRITE THE WHOLE FILE, WHICH IS BAD.
 def load_suggestions():
     if not os.path.exists('persistent_data/suggestions_log.pkl'):
         print("Creating a new suggestions dictionary...")
@@ -45,7 +46,6 @@ TESTING_SERVER_ID = 990935840974852126
 
 CHCH_ADMIN_ROLE = 887979941667405844
 CHCH_HELPER_ROLE = 1015191781865947146
-
 
 handler = logging.FileHandler(filename='persistent_data/discord.log', encoding='utf-8', mode='w')
 bot = commands.Bot(command_prefix="/", intents=discord.Intents.all())
@@ -73,9 +73,8 @@ async def on_ready():
     print(f'LOGGING_CHANNEL_ID set to: {USER_LOGGING_CHANNEL_ID}')
     print(f'GENERAL_CHANNEL_ID set to: {GENERAL_CHANNEL_ID}')
     print(f'BOT_LOG_CHANNEL_ID set to: {BOT_LOG_CHANNEL_ID}')
-    await bot.add_cog(Greetings(bot))
-    await bot.add_cog(MyCog(bot))
     await bot.add_cog(ModCmds(bot))
+    await bot.add_cog(UserCmds(bot))
     await bot.tree.sync()
     print("command tree synced")
 
@@ -124,25 +123,6 @@ async def sync(ctx: Context, guilds: Greedy[discord.Object], spec: Optional[Lite
 
     await ctx.send(f"Synced the tree to {ret}/{len(guilds)}.")
 
-"""
-class MyCog(commands.Cog):
-  def __init__(self, bot: commands.Bot) -> None:
-    self.bot = bot
-  @app_commands.command(name="command-1")
-  async def my_command(self, interaction: discord.Interaction) -> None:
-#    /command-1
-    await interaction.response.send_message("Hello from command 1!", ephemeral=True)
-
-"""
-
-class Greetings(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-    @app_commands.command(name="hello-cmd-name")
-    async def hello(self, interaction: discord.Interaction):
-        """docsctring for /hello-cmd-name"""
-        await interaction.response.send_message(f'Hello {interaction.user.name}~')
-
 class ModCmds(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -153,90 +133,60 @@ class ModCmds(commands.Cog):
         await interaction.response.send_message(f"Message sent to #{channel_to_send_message}\nLink to message:{sent_message.jump_url}", ephemeral=True)
         
 
-class MyCog(commands.GroupCog, name="parent"):
-  def __init__(self, bot: commands.Bot) -> None:
-    self.bot = bot
-    super().__init__()  # this is now required in this context.
-    
-  @app_commands.command(name="sub-1")
-  async def my_sub_command_1(self, interaction: discord.Interaction, arg1: discord.TextChannel) -> None:
-    """ /parent sub-1 """
-    await interaction.response.send_message("Hello from sub command 1", ephemeral=True)
-    
-  @app_commands.command(name="sub-2")
-  async def my_sub_command_2(self, interaction: discord.Interaction) -> None:
-    """ /parent sub-2 """
-    await interaction.response.send_message("Hello from sub command 2", ephemeral=True)
-    channels_mentioned = ctx.message.channel_mentions
-    if not channels_mentioned:
-        await ctx.send(f"Error: You must mention/tag the channel where the message is to be sent. Please specify the channel.")
-    elif len(msg_content) <= 1:
-        await ctx.send(f"You did not enter a message to be sent")
-    else:
-        channel = channels_mentioned[0]
-        await channel.send(" ".join(msg_content[1:]))
-    print(type(msg_content))
+class UserCmds(commands.Cog):
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot = bot
+    @app_commands.command(name="pfp")
+    async def pfp(self, interaction: discord.Interaction, user_mentioned: discord.User):
+        """Get the profile picture of a user"""
+        await interaction.response.send_message(user_mentioned.display_avatar.url)
 
-@bot.command(help="Prints the profile picture for the mentioned user")
-async def pfp(ctx, *args):
-    user = None
-    if ctx.message.mentions:  # make sure there is at least one mentioned user
-        user = ctx.message.mentions[0]  # get the first mentioned user
-    elif args:
-        username = args[0].lower()  # get the first argument and convert to lowercase
-        for attribute in ['name', 'display_name', 'global_name']:
-            for user_obj in ctx.guild.members:
-                if user_obj is not None:
-                    attr_value = getattr(user_obj, attribute, None)
-                    if attr_value is not None and attr_value.lower() == username:
-                        user = user_obj
-                        break
-            if user is not None:
-                break
+    @app_commands.command(name="trading_days")
+    async def trading_days(self, interaction: discord.Interaction):
+        """Gives info on days shops are closed for holidays"""
+        embed = Embed(title="Restricted trading days:")
 
-    if user is not None:
-        await ctx.send(str(user.avatar))
-    elif args:
-        await ctx.send(f"No user found with username, display name, or global name {username}.")
-    else:
-        await ctx.send("No user mentioned or username provided.")
+        embed.add_field(name="Days Shops closed", value="Christmas Day,\nGood Friday,\nEaster Sunday.\nANZAC Day until 1.00 pm", inline=False)
 
-@bot.command(help=f"Gives info on days shops are closed for holidays")
-async def trading_days(ctx):
-    embed = Embed(title="Restricted trading days:")
+        embed.add_field(name="Shops that can open on restricted trading days (some with conditions):",
+                        value="Small grocery shops like dairy, green grocer,\nService station,\nPharmacy, \nTake-away,\nrestaurant, cafe,\nReal estate agency,\nGarden centre: can only open on Easter Sunday",
+                        inline=False)
 
-    embed.add_field(name="Days Shops closed", value="Christmas Day,\nGood Friday,\nEaster Sunday.\nANZAC Day until 1.00 pm", inline=False)
+        embed.add_field(name="Shop providing services, rather than selling goods:",
+                        value="(e.g. video rental store, hairdresser) eg. Can sell services, like haircuts. Cannot sell goods, like hair product.",
+                        inline=False)
 
-    embed.add_field(name="Shops that can open on restricted trading days (some with conditions):",
-                    value="Small grocery shops like dairy, green grocer,\nService station,\nPharmacy, \nTake-away,\nrestaurant, cafe,\nReal estate agency,\nGarden centre: can only open on Easter Sunday",
-                    inline=False)
+        embed.add_field(name="Shop in a premises where an exhibition or show is taking place.",
+                        value="This includes markets, craft shows and stalls at these exhibitions and shows",
+                        inline=False)
 
-    embed.add_field(name="Shop providing services, rather than selling goods:",
-                    value="(e.g. video rental store, hairdresser) eg. Can sell services, like haircuts. Cannot sell goods, like hair product.",
-                    inline=False)
+        await interaction.response.send_message(embed=embed)
 
-    embed.add_field(name="Shop in a premises where an exhibition or show is taking place.",
-                    value="This includes markets, craft shows and stalls at these exhibitions and shows",
-                    inline=False)
-
-    await ctx.send(embed=embed)
-
-@bot.command(help="prints how long the user has been on the server")
-async def user_joined(ctx, member: discord.Member=None): 
-    if member is None: # if no member is mentioned
-        await ctx.send("You must mention a member!")
-        return
-    
-    now = datetime.now(pytz.utc) # get current time
-    joined_at = member.joined_at # get the time when member joined
-    delta = now - joined_at # calculate the difference
-    days = delta.days # calculate days and hours
-    hours = delta.seconds // 3600
-
-    await ctx.send(f'{member.name} joined {days} days and {hours} hours ago.')
+    @app_commands.command(name="suggest")
+    async def suggest(self, interaction: discord.Interaction, suggestion_content: str):
+        global suggestions, suggestion_index_counter
+        embed = Embed(
+        title=f"Suggestion #{suggestion_index_counter}",
+        description=suggestion_content,
+        color=0x00ff00,
+        )
+        embed.set_footer(text=f"From {interaction.user.name}", icon_url=interaction.user.display_avatar.url)
+        suggestions_channel = get(interaction.guild.channels, name="suggestions")
+        msg = await suggestions_channel.send(embed=embed)
+        await interaction.response.send_message(f"Your suggestion is being submitted....") ## , ephemeral=True
+        await asyncio.sleep(1)
+        await msg.add_reaction("👍")
+        await msg.add_reaction("👎")
+        thread = await msg.create_thread(name=f"Suggestion #{suggestion_index_counter}")
+        await thread.send(f"{interaction.user.mention} Here is the thread for your suggestion!")
+        suggestions[suggestion_index_counter] = msg.id
+        suggestion_index_counter += 1
+        save_suggestions(suggestions, suggestion_index_counter)
+        # confirmation_msg = interaction.original_response
+        await interaction.edit_original_response(content=f"{interaction.user.mention} Your suggestion has been submitted!")
 
 @bot.command(help="Submit a suggestion")
-async def suggest(ctx, *, suggestion_content):
+async def old_suggest(ctx, *, suggestion_content):
     global suggestions, suggestion_index_counter
     embed = Embed(
         title=f"Suggestion #{suggestion_index_counter}",
@@ -302,11 +252,11 @@ async def shutdown(ctx):
     await ctx.send("Bot is shutting down...")
     await bot.close()
 
-@bot.event
-async def on_command_error(ctx, error): 
-    if isinstance(error, commands.CommandNotFound):
-        await ctx.send_help()
-        await ctx.send("Error, command not found")
+# @bot.event
+# async def on_command_error(ctx, error): 
+#     if isinstance(error, commands.CommandNotFound):
+#         await ctx.send_help()
+#         await ctx.send("Error, command not found")
 
 @bot.event
 async def on_message(msg):
