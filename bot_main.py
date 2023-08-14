@@ -76,7 +76,8 @@ async def on_ready():
     await bot.add_cog(Greetings(bot))
     await bot.add_cog(MyCog(bot))
     await bot.add_cog(ModCmds(bot))
-
+    await bot.tree.sync()
+    print("command tree synced")
 
 @bot.command()
 @commands.guild_only()# @commands.is_owner()
@@ -123,13 +124,16 @@ async def sync(ctx: Context, guilds: Greedy[discord.Object], spec: Optional[Lite
 
     await ctx.send(f"Synced the tree to {ret}/{len(guilds)}.")
 
+"""
 class MyCog(commands.Cog):
   def __init__(self, bot: commands.Bot) -> None:
     self.bot = bot
   @app_commands.command(name="command-1")
   async def my_command(self, interaction: discord.Interaction) -> None:
-    """ /command-1 """
+#    /command-1
     await interaction.response.send_message("Hello from command 1!", ephemeral=True)
+
+"""
 
 class Greetings(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -142,22 +146,27 @@ class Greetings(commands.Cog):
 class ModCmds(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-    @app_commands.command(name="mod-cmd-name")
-    async def mod_cmd(self, interaction: discord.Interaction):
-        """docsctring for /mod-cmd-name"""
-        channels_mentioned = interaction.message.channel_mentions
-        if not channels_mentioned:
-            await interaction.response.send_message(f'Error: You must mention/tag the channel where the message is to be sent. Please specify the channel.', ephemeral=True)
-        elif not interaction.data['options']:
-            await interaction.response.send_message(f'You did not enter a message to be sent', ephemeral=True)
-        else:
-            msg_content = interaction.data['options'][0]['value']
-            channel = channels_mentioned[0]
-            await channel.send(msg_content)
+    @app_commands.command(name="modsend")
+    async def modsend(self, interaction, channel_to_send_message: discord.TextChannel, message_to_send: str):
+        """Send message as Mr Robot to a specified channel"""
+        sent_message = await channel_to_send_message.send(message_to_send)
+        await interaction.response.send_message(f"Message sent to #{channel_to_send_message}\nLink to message:{sent_message.jump_url}", ephemeral=True)
+        
 
-@bot.command(help=f"Sends a message as the bot to a specified channel. Eg !modsend #general This is your robot overlord speaking")
-@commands.has_any_role(CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, 'admin', 'admin_override') # chch admin, chch helper, admin, admin_override
-async def modsend(ctx, *msg_content):
+class MyCog(commands.GroupCog, name="parent"):
+  def __init__(self, bot: commands.Bot) -> None:
+    self.bot = bot
+    super().__init__()  # this is now required in this context.
+    
+  @app_commands.command(name="sub-1")
+  async def my_sub_command_1(self, interaction: discord.Interaction, arg1: discord.TextChannel) -> None:
+    """ /parent sub-1 """
+    await interaction.response.send_message("Hello from sub command 1", ephemeral=True)
+    
+  @app_commands.command(name="sub-2")
+  async def my_sub_command_2(self, interaction: discord.Interaction) -> None:
+    """ /parent sub-2 """
+    await interaction.response.send_message("Hello from sub command 2", ephemeral=True)
     channels_mentioned = ctx.message.channel_mentions
     if not channels_mentioned:
         await ctx.send(f"Error: You must mention/tag the channel where the message is to be sent. Please specify the channel.")
