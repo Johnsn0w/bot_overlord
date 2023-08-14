@@ -131,8 +131,33 @@ class ModCmds(commands.Cog):
         """Send message as Mr Robot to a specified channel"""
         sent_message = await channel_to_send_message.send(message_to_send)
         await interaction.response.send_message(f"Message sent to #{channel_to_send_message}\nLink to message:{sent_message.jump_url}", ephemeral=True)
-        
+    
+    @app_commands.command(name="accept")
+    async def accept(self, interaction: discord.Interaction, suggestion_number: int):
+        """Accept a suggestion"""
+        await update_suggestion(interaction, suggestion_number, ":white_check_mark:", "Your suggestion has been accepted! We'll try to implement this in a timely manner.")
+        await interaction.response.send_message(f"Suggestion #{suggestion_number} has been accepted!", ephemeral=True)
 
+    @app_commands.command(name="decline")
+    async def decline(self, interaction: discord.Interaction, suggestion_number: int):
+        """Decline a suggestion"""
+        await update_suggestion(interaction, suggestion_number, ":x:", "Sorry, your suggestion has been declined.")
+        await interaction.response.send_message(f"Suggestion #{suggestion_number} has been declined!", ephemeral=True)
+    
+    @app_commands.command(name="implement")
+    async def implement(self, interaction: discord.Interaction, suggestion_number: int):
+        """Implement a suggestion"""
+        await update_suggestion(interaction, suggestion_number, ":tada:", "Your suggestion has been implemented!")
+        await interaction.response.send_message(f"Suggestion #{suggestion_number} has been implemented!", ephemeral=True)
+
+    @app_commands.command(name="restart")
+    async def restart(self, interaction: discord.Interaction):
+        """restarts the bot, reloading the script"""
+        await interaction.response.send_message("Bot is restarting...")
+        os.system('python rebooter.py')
+        await bot.close()  # close the bot
+
+    
 class UserCmds(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -184,27 +209,7 @@ class UserCmds(commands.Cog):
         save_suggestions(suggestions, suggestion_index_counter)
         # confirmation_msg = interaction.original_response
         await interaction.edit_original_response(content=f"{interaction.user.mention} Your suggestion has been submitted!")
-
-@bot.command(help="Submit a suggestion")
-async def old_suggest(ctx, *, suggestion_content):
-    global suggestions, suggestion_index_counter
-    embed = Embed(
-        title=f"Suggestion #{suggestion_index_counter}",
-        description=suggestion_content,
-        color=0x00ff00,
-    )
-    embed.set_footer(text=f"From {ctx.author.name}", icon_url=ctx.author.display_avatar.url)
-    suggestions_channel = get(ctx.guild.channels, name="suggestions")
-    msg = await suggestions_channel.send(embed=embed)
-    await asyncio.sleep(1)
-    await msg.add_reaction("👍")
-    await msg.add_reaction("👎")
-    thread = await msg.create_thread(name=f"Suggestion #{suggestion_index_counter}")
-    await thread.send(f"{ctx.author.mention} Your suggestion has been submitted!")
-    suggestions[suggestion_index_counter] = msg.id
-    suggestion_index_counter += 1
-    save_suggestions(suggestions, suggestion_index_counter)
-
+    
 async def update_suggestion(ctx, suggestion_number: int, emoji: str, message: str):
     global suggestions, suggestion_index_counter
     if suggestion_number not in suggestions:
@@ -223,28 +228,6 @@ async def update_suggestion(ctx, suggestion_number: int, emoji: str, message: st
         await ctx.send(f"Message with ID {message_id} not found.")
     except discord.HTTPException:
         await ctx.send("Failed to fetch or edit message.")
-
-@bot.command(help="Accept a suggestion")
-@commands.has_any_role(CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, 'admin', 'admin_override') # chch admin, chch helper, admin, admin_override
-async def accept(ctx, suggestion_number: int):
-    await update_suggestion(ctx, suggestion_number, ":white_check_mark:", "Your suggestion has been accepted! We'll try to implement this in a timely manner.")
-
-@bot.command(help="Decline a suggestion")
-@commands.has_any_role(CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, 'admin', 'admin_override') # chch admin, chch helper, admin, admin_override
-async def decline(ctx, suggestion_number: int):
-    await update_suggestion(ctx, suggestion_number, ":x:", "Sorry, your suggestion has been declined.")
-
-@bot.command(help="Mark a suggestion as implemented")
-@commands.has_any_role(CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, 'admin', 'admin_override') # chch admin, chch helper, admin, admin_override
-async def implement(ctx, suggestion_number: int):
-    await update_suggestion(ctx, suggestion_number, ":tada:", "Your suggestion has been implemented!")
-
-@bot.command(help="restarts the bot, reloading the script")
-@commands.has_any_role(CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, 'admin', 'admin_override') # chch admin, chch helper, admin, admin_override
-async def restart(ctx):
-    await ctx.send("Bot is restarting...")
-    os.system('python rebooter.py')  # start rebooter script
-    await bot.close()  # close the bot
 
 @bot.command(help="shutdown the bot")
 @commands.has_any_role(CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, 'admin', 'admin_override') # chch admin, chch helper, admin, admin_override
