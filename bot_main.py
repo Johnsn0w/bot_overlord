@@ -46,6 +46,7 @@ CHCH_ADMIN_ROLE = 887979941667405844
 CHCH_HELPER_ROLE = 1015191781865947146
 DEV_ADMIN_ROLE = 1132129183103975504
 DEV_ADMIN_OVERRIDE_ROLE = 1138354782197776444
+BACKENDPERM_USERS = [445010877297721344, 1067214271148208201] # crumpet, frodogaggins
 MODPERM_ROLES = [CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, DEV_ADMIN_ROLE, DEV_ADMIN_OVERRIDE_ROLE]
 
 handler = logging.FileHandler(filename='persistent_data/discord.log', encoding='utf-8', mode='w')
@@ -78,6 +79,7 @@ async def on_ready():
     print(f'BOT_LOG_CHANNEL_ID set to: {BOT_LOG_CHANNEL_ID}')
     await bot.add_cog(ModCmds(bot))
     await bot.add_cog(UserCmds(bot))
+    await bot.add_cog(BackendCmds(bot))
     await bot.tree.sync()
     print("command tree synced")
     await bot.load_extension('jishaku')
@@ -86,7 +88,8 @@ async def on_ready():
     # print(role_ids)
 
 @bot.command()
-@commands.guild_only()# @commands.is_owner()
+@commands.guild_only()
+@commands.has_permissions(administrator=True)
 async def sync(ctx: Context, guilds: Greedy[discord.Object], spec: Optional[Literal["~", "*", "^"]] = None) -> None:
     """
     Syncs the command tree to the specified guilds.
@@ -136,41 +139,72 @@ class ModCmds(commands.Cog):
         self.bot = bot
     
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        # return await does_user_have_mod_role(interaction)
-        for role in interaction.user.roles:
-            if role.id in MODPERM_ROLES:
-                return True
-        return False
-        
+        # return await does_user_have_certain_role(interaction, MODPERM_ROLES)
+        return any(role.id in MODPERM_ROLES for role in interaction.user.roles)  # only allow cmds if user has mod perms
+    
+    @app_commands.default_permissions(ban_members=True)
     @app_commands.command(name="hi")
     async def say_hi(self, interaction: discord.Interaction):
         """Say hi to the bot"""
         await interaction.response.send_message(f"Hi {interaction.user.mention}!")
-
+    
+    @app_commands.default_permissions(ban_members=True)
     @app_commands.command(name="modsend")
     async def modsend(self, interaction, channel_to_send_message: discord.TextChannel, message_to_send: str):
         """Send message as Mr Robot to a specified channel"""
         sent_message = await channel_to_send_message.send(message_to_send)
         await interaction.response.send_message(f"Message sent to #{channel_to_send_message}\nLink to message:{sent_message.jump_url}", ephemeral=True)
     
+    @app_commands.default_permissions(ban_members=True)
     @app_commands.command(name="accept")
     async def accept(self, interaction: discord.Interaction, suggestion_number: int):
-        """Accept a suggestion"""
+        """Accept a suggestion. Marks the corresponding suggestion number as accepted."""
         await update_suggestion(interaction, suggestion_number, ":white_check_mark:", "Your suggestion has been accepted! We'll try to implement this in a timely manner.")
         await interaction.response.send_message(f"Suggestion #{suggestion_number} has been accepted!", ephemeral=True)
 
+    @app_commands.default_permissions(ban_members=True)
     @app_commands.command(name="decline")
     async def decline(self, interaction: discord.Interaction, suggestion_number: int):
-        """Decline a suggestion"""
+        """Decline a suggestion. Marks the corresponding suggestion number as declined."""
         await update_suggestion(interaction, suggestion_number, ":x:", "Sorry, your suggestion has been declined.")
         await interaction.response.send_message(f"Suggestion #{suggestion_number} has been declined!", ephemeral=True)
-    
+
+    @app_commands.default_permissions(ban_members=True)    
     @app_commands.command(name="implement")
     async def implement(self, interaction: discord.Interaction, suggestion_number: int):
-        """Implement a suggestion"""
+        """Implement a suggestion. Marks the corresponding suggestion number as implemented."""
         await update_suggestion(interaction, suggestion_number, ":tada:", "Your suggestion has been implemented!")
         await interaction.response.send_message(f"Suggestion #{suggestion_number} has been implemented!", ephemeral=True)
 
+    @app_commands.command(name="pfp")
+    async def pfp(self, interaction: discord.Interaction, user_mentioned: discord.User):
+        """Get the profile picture of a user"""
+        await interaction.response.send_message(user_mentioned.display_avatar.url)
+
+    @app_commands.default_permissions(ban_members=True)    
+    @app_commands.command(name="shutdown")
+    async def shutdown(self, interaction: discord.Interaction):
+        """Shuts down the bot. Should not restart automatically. In case something goes wrong and you need bot to go sleepy"""
+        await interaction.response.send_message("Bot is shutting down...")
+        await bot.close()
+
+class BackendCmds(commands.Cog):
+    
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot = bot
+    
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        # only allow cmds if user is on BACKENDPERM_USERS list, this blocks admins
+        current_user_id = interaction.user.id
+        return any(current_user_id == user_id for user_id in BACKENDPERM_USERS)
+
+    @app_commands.default_permissions(manage_guild=True) # 
+    @app_commands.command(name="backend-hi")
+    async def say_hi(self, interaction: discord.Interaction):
+        """Say hi to the bot"""
+        await interaction.response.send_message(f"Hi {interaction.user.mention}!")
+
+    @app_commands.default_permissions(manage_guild=True)
     @app_commands.command(name="restart")
     async def restart(self, interaction: discord.Interaction):
         """restarts the bot, reloading the script"""
@@ -178,14 +212,10 @@ class ModCmds(commands.Cog):
         os.system('python rebooter.py')
         await bot.close()  # close the bot
 
-    
+
 class UserCmds(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-    @app_commands.command(name="pfp")
-    async def pfp(self, interaction: discord.Interaction, user_mentioned: discord.User):
-        """Get the profile picture of a user"""
-        await interaction.response.send_message(user_mentioned.display_avatar.url)
 
     @app_commands.command(name="trading_days")
     async def trading_days(self, interaction: discord.Interaction):
@@ -231,11 +261,6 @@ class UserCmds(commands.Cog):
         # confirmation_msg = interaction.original_response
         await interaction.edit_original_response(content=f"{interaction.user.mention} Your suggestion has been submitted!")
 
-@bot.command(help="shutdown the bot")
-@commands.has_any_role(CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, 'admin', 'admin_override') # chch admin, chch helper, admin, admin_override
-async def shutdown(ctx):
-    await ctx.send("Bot is shutting down...")
-    await bot.close()
 
 async def update_suggestion(ctx, suggestion_number: int, emoji: str, message: str):
     global suggestions, suggestion_index_counter
@@ -256,10 +281,6 @@ async def update_suggestion(ctx, suggestion_number: int, emoji: str, message: st
     except discord.HTTPException:
         await ctx.send("Failed to fetch or edit message.")
 
-@bot.command()
-@commands.guild_only()
-async def say_hi(ctx):
-    await ctx.send("Hi!")
 
 @bot.event
 async def on_message(msg):
@@ -283,7 +304,5 @@ async def on_message(msg):
 
     await bot.process_commands(msg)
 
-def hello_world():
-    print("hello world")
 
 bot.run(DISCORD_API_KEY) # run and loop forever
