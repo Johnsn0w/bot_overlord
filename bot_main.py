@@ -15,8 +15,6 @@ import pickle
 from typing import Literal, Optional
 from discord.ext.commands import Greedy, Context
 
-
-
 def load_env_vars(): 
     from dotenv import load_dotenv
     load_dotenv()
@@ -46,14 +44,19 @@ TESTING_SERVER_ID = 990935840974852126
 
 CHCH_ADMIN_ROLE = 887979941667405844
 CHCH_HELPER_ROLE = 1015191781865947146
+DEV_ADMIN_ROLE = 1132129183103975504
+DEV_ADMIN_OVERRIDE_ROLE = 1138354782197776444
+MODPERM_ROLES = [CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, DEV_ADMIN_ROLE, DEV_ADMIN_OVERRIDE_ROLE]
 
 handler = logging.FileHandler(filename='persistent_data/discord.log', encoding='utf-8', mode='w')
 bot = commands.Bot(command_prefix="/", intents=discord.Intents.all())
 
+
 @bot.event
 async def on_ready():
-    global USER_LOGGING_CHANNEL_ID, GENERAL_CHANNEL_ID, BOT_LOG_CHANNEL_ID
+    global USER_LOGGING_CHANNEL_ID, GENERAL_CHANNEL_ID, BOT_LOG_CHANNEL_ID, CURRENT_SERVER_ID
     guild_id = bot.guilds[0].id if len(bot.guilds) == 1 else None
+    CURRENT_SERVER_ID = guild_id
     if guild_id == CHCH_SERVER_ID:
         detected_server = "chch"
         GENERAL_CHANNEL_ID = 887846613035409465
@@ -77,6 +80,10 @@ async def on_ready():
     await bot.add_cog(UserCmds(bot))
     await bot.tree.sync()
     print("command tree synced")
+    await bot.load_extension('jishaku')
+    # guild = bot.guilds[0]  # Replace with your guild ID
+    # role_ids = [role.id for role in guild.roles]
+    # print(role_ids)
 
 @bot.command()
 @commands.guild_only()# @commands.is_owner()
@@ -123,9 +130,23 @@ async def sync(ctx: Context, guilds: Greedy[discord.Object], spec: Optional[Lite
 
     await ctx.send(f"Synced the tree to {ret}/{len(guilds)}.")
 
+
 class ModCmds(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+    
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        # return await does_user_have_mod_role(interaction)
+        for role in interaction.user.roles:
+            if role.id in MODPERM_ROLES:
+                return True
+        return False
+        
+    @app_commands.command(name="hi")
+    async def say_hi(self, interaction: discord.Interaction):
+        """Say hi to the bot"""
+        await interaction.response.send_message(f"Hi {interaction.user.mention}!")
+
     @app_commands.command(name="modsend")
     async def modsend(self, interaction, channel_to_send_message: discord.TextChannel, message_to_send: str):
         """Send message as Mr Robot to a specified channel"""
@@ -209,7 +230,13 @@ class UserCmds(commands.Cog):
         save_suggestions(suggestions, suggestion_index_counter)
         # confirmation_msg = interaction.original_response
         await interaction.edit_original_response(content=f"{interaction.user.mention} Your suggestion has been submitted!")
-    
+
+@bot.command(help="shutdown the bot")
+@commands.has_any_role(CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, 'admin', 'admin_override') # chch admin, chch helper, admin, admin_override
+async def shutdown(ctx):
+    await ctx.send("Bot is shutting down...")
+    await bot.close()
+
 async def update_suggestion(ctx, suggestion_number: int, emoji: str, message: str):
     global suggestions, suggestion_index_counter
     if suggestion_number not in suggestions:
@@ -229,28 +256,21 @@ async def update_suggestion(ctx, suggestion_number: int, emoji: str, message: st
     except discord.HTTPException:
         await ctx.send("Failed to fetch or edit message.")
 
-@bot.command(help="shutdown the bot")
-@commands.has_any_role(CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, 'admin', 'admin_override') # chch admin, chch helper, admin, admin_override
-async def shutdown(ctx):
-    await ctx.send("Bot is shutting down...")
-    await bot.close()
-
-# @bot.event
-# async def on_command_error(ctx, error): 
-#     if isinstance(error, commands.CommandNotFound):
-#         await ctx.send_help()
-#         await ctx.send("Error, command not found")
+@bot.command()
+@commands.guild_only()
+async def say_hi(ctx):
+    await ctx.send("Hi!")
 
 @bot.event
 async def on_message(msg):
     if msg.author == bot.user:
         return
-    
+    """ checks if the message has a likely farenheigh number (eg 120f) and replies with the converted temperature """
     msg_temperature = fahrenheit_to_celsius(msg.content)
     if msg_temperature != None:
         fahrenheit, celcius = msg_temperature
         await msg.channel.send(f"{fahrenheit}f is {celcius}c!")
-    
+    """ checks if the message is from a new user and logs it in the user-logging channel """
     if isinstance(msg.author, discord.Member) and datetime.now(timezone.utc) - msg.author.joined_at <= USER_LOGGING_AGE: # Check if the user is a Member (has a joined_at property) and if the account is newer than USER_LOGGING_AGE
         
         joined_timestamp = int(msg.author.joined_at.timestamp()) # Get the Unix timestamp of when the user joined
@@ -263,5 +283,7 @@ async def on_message(msg):
 
     await bot.process_commands(msg)
 
+def hello_world():
+    print("hello world")
 
 bot.run(DISCORD_API_KEY) # run and loop forever
