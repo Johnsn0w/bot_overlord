@@ -2,6 +2,7 @@
 import os
 import sys
 import logging
+import logging.handlers
 import discord
 from discord import Embed, File, app_commands
 from discord.ext import commands, tasks
@@ -14,14 +15,15 @@ import pytz
 import pickle
 from typing import Literal, Optional
 from discord.ext.commands import Greedy, Context
+from discord.app_commands import Choice
 
 def load_env_vars(): 
     from dotenv import load_dotenv
     load_dotenv()
 load_env_vars()
 
-# LOAD AND SAVE NEED REWRITE. THEY OVERWRITE THE WHOLE FILE, WHICH IS BAD.
 def load_suggestions():
+    """loads the suggestions dictionary from a pickle file to memory. Effectively reloading the objects in the last state they were when the script exited"""
     if not os.path.exists('persistent_data/suggestions_log.pkl'):
         print("Creating a new suggestions dictionary...")
         return {}, 1
@@ -30,6 +32,7 @@ def load_suggestions():
         return data['suggestions'], data['suggestion_index_counter']
 
 def save_suggestions(suggestions, suggestion_index_counter):
+    """Saves the suggestions dictionary to a pickle file. Effectively backing up the objects in memory to the disk for persistence"""
     with open('persistent_data/suggestions_log.pkl', 'wb') as f:
         pickle.dump({'suggestions': suggestions, 'suggestion_index_counter': suggestion_index_counter}, f)
 
@@ -49,9 +52,13 @@ DEV_ADMIN_OVERRIDE_ROLE = 1138354782197776444
 BACKENDPERM_USERS = [445010877297721344, 1067214271148208201] # crumpet, frodogaggins
 MODPERM_ROLES = [CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, DEV_ADMIN_ROLE, DEV_ADMIN_OVERRIDE_ROLE]
 
-handler = logging.FileHandler(filename='persistent_data/discord.log', encoding='utf-8', mode='w')
-bot = commands.Bot(command_prefix="/", intents=discord.Intents.all())
+LOG_FILEHANDLER = logging.FileHandler(filename='persistent_data/discord.log', encoding='utf-8', mode='w')
+LOG_STREMHANDLER = logging.StreamHandler(sys.stderr)
+discord_logger = logging.getLogger('discord') # grab the discord logger that's floating in the ether completely undescribed and only inferred in documentation
+discord_logger.addHandler(LOG_FILEHANDLER) # add the file handler to the logger
+discord_logger.addHandler(LOG_STREMHANDLER) # add the stream handler to the logger
 
+bot = commands.Bot(command_prefix="/", intents=discord.Intents.all())
 
 @bot.event
 async def on_ready():
@@ -68,24 +75,22 @@ async def on_ready():
         GENERAL_CHANNEL_ID = 1137959377362489415
         USER_LOGGING_CHANNEL_ID = 1133637838219530261
         BOT_LOG_CHANNEL_ID = 1137959377362489415
+        await bot.load_extension('jishaku')
     
     channel = bot.get_channel(BOT_LOG_CHANNEL_ID)
     print(f"Login in with {CURRENT_BRANCH_ENV} branch\ndetected server: {detected_server}")
     await channel.send(f"Login in with {CURRENT_BRANCH_ENV} branch\ndetected server: {detected_server}") 
     
-    print(f'Connected to server with ID: {guild_id}')
-    print(f'LOGGING_CHANNEL_ID set to: {USER_LOGGING_CHANNEL_ID}')
-    print(f'GENERAL_CHANNEL_ID set to: {GENERAL_CHANNEL_ID}')
-    print(f'BOT_LOG_CHANNEL_ID set to: {BOT_LOG_CHANNEL_ID}')
+    print(f"""Connected to server with ID: {guild_id}
+        LOGGING_CHANNEL_ID set to: {USER_LOGGING_CHANNEL_ID}
+        GENERAL_CHANNEL_ID set to: {GENERAL_CHANNEL_ID}
+        BOT_LOG_CHANNEL_ID set to: {BOT_LOG_CHANNEL_ID}""")
     await bot.add_cog(ModCmds(bot))
     await bot.add_cog(UserCmds(bot))
     await bot.add_cog(BackendCmds(bot))
+    await bot.load_extension('hello_world_extension')
     await bot.tree.sync()
     print("command tree synced")
-    await bot.load_extension('jishaku')
-    # guild = bot.guilds[0]  # Replace with your guild ID
-    # role_ids = [role.id for role in guild.roles]
-    # print(role_ids)
 
 @bot.command()
 @commands.guild_only()
@@ -199,10 +204,11 @@ class BackendCmds(commands.Cog):
         return any(current_user_id == user_id for user_id in BACKENDPERM_USERS)
 
     @app_commands.default_permissions(manage_guild=True) # 
-    @app_commands.command(name="backend-hi")
+    @app_commands.command(name="test")
     async def say_hi(self, interaction: discord.Interaction):
-        """Say hi to the bot"""
-        await interaction.response.send_message(f"Hi {interaction.user.mention}!")
+        """runs a test command"""
+        await interaction.response.send_message(f"Running test command!")
+        await bot.load_extension('hello_world_extension')
 
     @app_commands.default_permissions(manage_guild=True)
     @app_commands.command(name="restart")
@@ -212,6 +218,23 @@ class BackendCmds(commands.Cog):
         os.system('python rebooter.py')
         await bot.close()  # close the bot
 
+    # @app_commands.default_permissions(manage_guild=True)
+    @app_commands.command(name="set_log_level")
+    @app_commands.describe(log_level="The log level to set")
+    @app_commands.choices(log_level=[
+        Choice(name='critical', value="CRITICAL"),
+        Choice(name='error', value="ERROR"),
+        Choice(name='warning', value="WARNING"),
+        Choice(name='info', value="INFO"),
+        Choice(name='debug', value="DEBUG"),
+        Choice(name='notset', value="NOTSET"),
+    ])
+    async def set_log_level(self, interaction: discord.Interaction, log_level: Choice[str]):
+        """sets the log level of the bot"""
+        discord_logger.setLevel(log_level.value)
+        await interaction.response.send_message(f"log level set to {log_level.name}")
+
+         
 
 class UserCmds(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -305,4 +328,7 @@ async def on_message(msg):
     await bot.process_commands(msg)
 
 
-bot.run(DISCORD_API_KEY) # run and loop forever
+bot.load_extension('hello_world_extension')
+bot.run(DISCORD_API_KEY)
+
+
