@@ -53,9 +53,9 @@ BACKENDPERM_USERS = [445010877297721344, 1067214271148208201] # crumpet, frodoga
 MODPERM_ROLES = [CHCH_ADMIN_ROLE, CHCH_HELPER_ROLE, DEV_ADMIN_ROLE, DEV_ADMIN_OVERRIDE_ROLE]
 
 # if persistent_data folder doesn't exist, create it
-if not os.path.exists('persistent_data'):
-    os.makedirs('persistent_data')
-LOG_FILEHANDLER = logging.FileHandler(filename='persistent_data/discord.log', encoding='utf-8', mode='w')
+if not os.path.exists('./persistent_data'):
+    os.makedirs('./persistent_data')
+LOG_FILEHANDLER = logging.FileHandler(filename='./persistent_data/discord.log', encoding='utf-8', mode='w')
 LOG_STREMHANDLER = logging.StreamHandler(sys.stderr)
 discord_logger = logging.getLogger('discord') # grab the discord logger that's floating in the ether completely undescribed and only inferred in documentation
 discord_logger.addHandler(LOG_FILEHANDLER) # add the file handler to the logger
