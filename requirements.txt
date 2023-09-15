@@ -1,4 +1,8 @@
+aiohttp
+asyncpg
 discord.py
 feedparser
 python-dotenv
 pytz
+youtube_dl
+Jishaku

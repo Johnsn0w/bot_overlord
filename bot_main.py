@@ -220,6 +220,13 @@ class BackendCmds(commands.Cog):
         os.system('python rebooter.py')
         await bot.close()  # close the bot
 
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.command(name="gitpull")
+    async def restart(self, interaction: discord.Interaction):
+        """pulls from git, outputs the stdout to the channel it was called from"""
+        await interaction.response.send_message("Pulling from git...")
+        os.system('git pull')
+
     # @app_commands.default_permissions(manage_guild=True)
     @app_commands.command(name="set_log_level")
     @app_commands.describe(log_level="The log level to set")
@@ -236,7 +243,6 @@ class BackendCmds(commands.Cog):
         discord_logger.setLevel(log_level.value)
         await interaction.response.send_message(f"log level set to {log_level.name}")
 
-         
 
 class UserCmds(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -305,7 +311,6 @@ async def update_suggestion(ctx, suggestion_number: int, emoji: str, message: st
         await ctx.send(f"Message with ID {message_id} not found.")
     except discord.HTTPException:
         await ctx.send("Failed to fetch or edit message.")
-
 
 @bot.event
 async def on_message(msg):
