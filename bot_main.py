@@ -225,7 +225,7 @@ class BackendCmds(commands.Cog):
     async def restart(self, interaction: discord.Interaction):
         """pulls from git, outputs the stdout to the channel it was called from"""
         await interaction.response.send_message("Pulling from git...")
-        os.system('git pull')
+        os.system('git pull https://github.com/johnsn0w/fernware.git DEV')
 
     # @app_commands.default_permissions(manage_guild=True)
     @app_commands.command(name="set_log_level")
