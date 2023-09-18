@@ -96,8 +96,6 @@ async def on_ready():
     print("command tree synced")
 
 @bot.command()
-@commands.guild_only()
-@commands.has_permissions(administrator=True)
 async def sync(ctx: Context, guilds: Greedy[discord.Object], spec: Optional[Literal["~", "*", "^"]] = None) -> None:
     """
     Syncs the command tree to the specified guilds.
@@ -195,6 +193,14 @@ class ModCmds(commands.Cog):
         await interaction.response.send_message("Bot is shutting down...")
         await bot.close()
 
+    @app_commands.default_permissions(ban_members=True)    
+    @app_commands.command(name="load_ext")
+    async def load_ext(self, interaction: discord.Interaction, ext_name: str):
+        """Loads an extension"""
+        await interaction.response.send_message(f"Loading extension {ext_name}...")
+        await bot.load_extension(ext_name)
+        await interaction.followup.send(f"Extension {ext_name} loaded!")
+
 class BackendCmds(commands.Cog):
     
     def __init__(self, bot: commands.Bot) -> None:
@@ -213,8 +219,8 @@ class BackendCmds(commands.Cog):
         await bot.load_extension('hello_world_extension')
 
     @app_commands.default_permissions(manage_guild=True)
-    @app_commands.command(name="restart")
-    async def restart(self, interaction: discord.Interaction):
+    @app_commands.command(name="blah")
+    async def blah(self, interaction: discord.Interaction):
         """restarts the bot, reloading the script"""
         await interaction.response.send_message("Bot is restarting...")
         os.system('python rebooter.py')
@@ -222,10 +228,12 @@ class BackendCmds(commands.Cog):
 
     @app_commands.default_permissions(manage_guild=True)
     @app_commands.command(name="gitpull")
-    async def restart(self, interaction: discord.Interaction):
+    async def gitpull(self, interaction: discord.Interaction):
         """pulls from git, outputs the stdout to the channel it was called from"""
         await interaction.response.send_message("Pulling from git...")
-        os.system('git pull https://github.com/johnsn0w/fernware.git DEV')
+        # takes the output from stdout and stores it in a variable
+        output = os.popen('git pull origin DEV').read()
+        await interaction.followup.send(output)
 
     # @app_commands.default_permissions(manage_guild=True)
     @app_commands.command(name="set_log_level")
@@ -242,7 +250,6 @@ class BackendCmds(commands.Cog):
         """sets the log level of the bot"""
         discord_logger.setLevel(log_level.value)
         await interaction.response.send_message(f"log level set to {log_level.name}")
-
 
 class UserCmds(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -291,7 +298,6 @@ class UserCmds(commands.Cog):
         save_suggestions(suggestions, suggestion_index_counter)
         # confirmation_msg = interaction.original_response
         await interaction.edit_original_response(content=f"{interaction.user.mention} Your suggestion has been submitted!")
-
 
 async def update_suggestion(ctx, suggestion_number: int, emoji: str, message: str):
     global suggestions, suggestion_index_counter
