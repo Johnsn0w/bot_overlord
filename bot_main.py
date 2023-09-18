@@ -150,9 +150,9 @@ class ModCmds(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
     
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        # return await does_user_have_certain_role(interaction, MODPERM_ROLES)
-        return any(role.id in MODPERM_ROLES for role in interaction.user.roles)  # only allow cmds if user 
+    # async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    #     # return await does_user_have_certain_role(interaction, MODPERM_ROLES)
+    #     return any(role.id in MODPERM_ROLES for role in interaction.user.roles)  # only allow cmds if user 
     @app_commands.default_permissions(ban_members=True)
     @app_commands.command(name="hi")
     async def say_hi(self, interaction: discord.Interaction):
