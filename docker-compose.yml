@@ -1,0 +1,10 @@
+version: '3'
+services:
+  mr_robot:
+    image: python:bullseye
+    container_name: mr_robot
+    volumes:
+      - type: bind
+        source: ./mr_robot
+        target: /mr_robot
+    entrypoint: /mr_robot/entrypoint.sh
