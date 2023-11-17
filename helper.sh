@@ -1,11 +1,15 @@
 #!/bin/bash
 
 retrieve_tokens() {
+    echo "Retrieving token from Git..."
     mkdir -p ./.temp_git/
     git clone git@github.com:Johnsn0w/token_discord.git ./.temp_git/
     mv ./.temp_git/.env ./mr_robot/
     rm -rf ./.temp_git/
 }
+
+retrieve_tokens
+
 
 # cmdline_arg=$1 # store cmdline arg to variable
 
