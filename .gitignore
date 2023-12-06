@@ -1,8 +1,7 @@
-/official_examples/
 /misc/
-/mr_robot/__pycache__/
+*__pycache__*
 /.vscode/
-/persistent_data/
+*persistent_data*
 .env
 *.log
 .*
@@ -10,6 +9,4 @@
 *.pkl
 *.7z
 *.zip
-misc.txt
 rss_feed_grabber.py
-temp.py
