@@ -1,6 +1,6 @@
 /official_examples/
 /misc/
-/__pycache__/
+/mr_robot/__pycache__/
 /.vscode/
 /persistent_data/
 .env

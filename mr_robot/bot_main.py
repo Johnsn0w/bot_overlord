@@ -39,7 +39,7 @@ def save_suggestions(suggestions, suggestion_index_counter):
 suggestions, suggestion_index_counter = load_suggestions()
 
 USER_LOGGING_AGE = timedelta(days=7)
-DISCORD_API_KEY = os.environ.get('DISCORD_API_KEY')
+DISCORD_API_KEY = os.environ.get('DEV_DISCORD_API_KEY')
 CURRENT_BRANCH_ENV = os.environ.get('BRANCH_ENV')
 
 CHCH_SERVER_ID = 887846613035409458
